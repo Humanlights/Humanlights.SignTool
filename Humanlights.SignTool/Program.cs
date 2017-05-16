@@ -123,16 +123,24 @@ namespace Humanlights.SignTool
                 }
                 else
                 {
-                    var signingCommandLine = $"sign /f \"{certificatePath}\" /t {timestamp} /v \"{filePath}\"";
+                    if ( Helper.EndsWith ( filePath ) )
+                    {
+                        var signingCommandLine = $"sign /f \"{certificatePath}\" /t {timestamp} /v \"{filePath}\"";
 
-                    var process = new Process ();
-                    process.StartInfo.FileName = signtoolPath;
-                    process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                    process.StartInfo.ErrorDialog = false;
-                    process.StartInfo.Arguments = signingCommandLine;
-                    process.Start ();
+                        var process = new Process ();
+                        process.StartInfo.FileName = signtoolPath;
+                        process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                        process.StartInfo.ErrorDialog = false;
+                        process.StartInfo.Arguments = signingCommandLine;
+                        process.Start ();
 
-                    Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                        Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                    }
+                    else
+                    {
+                        Console.WriteLine ( $"File {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )} is not legible for signing. Be sure it ends with *.dll, *.exe, *.ocx or *.cab." );
+                        System.Threading.Thread.Sleep ( 5000 );
+                    }
                 }
             }
 
@@ -181,13 +189,21 @@ namespace Humanlights.SignTool
                 }
                 else
                 {
-                    using ( FileStream fileStream = new FileStream ( filePath, FileMode.Open, FileAccess.ReadWrite ) )
+                    if ( Helper.EndsWith ( filePath ) )
                     {
-                        ImageRemoveCertificate ( fileStream.SafeFileHandle.DangerousGetHandle (), 0 );
-                        fileStream.Close ();
-                    }
+                        using ( FileStream fileStream = new FileStream ( filePath, FileMode.Open, FileAccess.ReadWrite ) )
+                        {
+                            ImageRemoveCertificate ( fileStream.SafeFileHandle.DangerousGetHandle (), 0 );
+                            fileStream.Close ();
+                        }
 
-                    Console.WriteLine ( $"Unsigning: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                        Console.WriteLine ( $"Unsigning: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                    }
+                    else
+                    {
+                        Console.WriteLine ( $"File {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )} is not legible for unsigning. Be sure it ends with *.dll, *.exe, *.ocx or *.cab." );
+                        System.Threading.Thread.Sleep ( 5000 );
+                    }
                 }
             }
 

@@ -42,5 +42,12 @@ namespace Humanlights.SignTool
 
             return all;
         }
+        public static bool EndsWith(string file )
+        {
+            if ( file.EndsWith ( ".exe" ) || file.EndsWith ( ".dll" ) || file.EndsWith ( ".ocx" ) || file.EndsWith ( ".cab" ) )
+                return true;
+
+            return false;
+        }
     }
 }
