@@ -34,6 +34,12 @@ namespace Humanlights.SignTool
             foreach ( string file in Directory.GetFiles ( mainFolder, "*.dll", SearchOption.AllDirectories ).ToList () )
                 all.Add ( file );
 
+            foreach ( string file in Directory.GetFiles ( mainFolder, "*.ocx", SearchOption.AllDirectories ).ToList () )
+                all.Add ( file );
+
+            foreach ( string file in Directory.GetFiles ( mainFolder, "*.cab", SearchOption.AllDirectories ).ToList () )
+                all.Add ( file );
+
             return all;
         }
     }

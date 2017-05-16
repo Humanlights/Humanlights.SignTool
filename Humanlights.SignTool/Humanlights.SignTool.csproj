@@ -50,8 +50,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="imagehlp.dll" />
-    <Content Include="signtool.exe" />
+    <Content Include="Custom References\imagehlp.dll" />
+    <Content Include="Custom References\signtool.exe" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
