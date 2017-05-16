@@ -44,7 +44,9 @@ namespace Humanlights.SignTool
         }
         public static bool EndsWith(string file )
         {
-            if ( file.EndsWith ( ".exe" ) || file.EndsWith ( ".dll" ) || file.EndsWith ( ".ocx" ) || file.EndsWith ( ".cab" ) )
+            var f = file.ToLower ();
+
+            if ( f.EndsWith ( ".exe" ) || f.EndsWith ( ".dll" ) || f.EndsWith ( ".ocx" ) || f.EndsWith ( ".cab" ) )
                 return true;
 
             return false;
