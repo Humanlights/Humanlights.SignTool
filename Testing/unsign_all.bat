@@ -1,2 +1,2 @@
 cd "Docs"
-Humanlights.SignTool.exe /unsign -folder "TestingDlls"
+Humanlights.SignTool.exe unsign /f -folder "TestingDlls"

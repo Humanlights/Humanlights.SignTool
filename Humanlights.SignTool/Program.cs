@@ -1,12 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Humanlights.SignTool
 {
@@ -15,30 +10,46 @@ namespace Humanlights.SignTool
         [DllImport ( "Imagehlp.dll " )]
         private static extern bool ImageRemoveCertificate ( IntPtr handle, int index );
 
-        private const string signArg = "/sign";
-        private const string unsignArg = "/unsign";
-        private const string fullArg = "/full";
+        private const string signArg = "sign";
+        private const string unsignArg = "unsign";
+        private const string overwriteArg = "overwrite";
+        private const string fullPrintArg = "/f";
 
         private const string folderPathArg = "-folder";
         private const string filePathArg = "-file";
+
+        private const string digestAlgorithmArg = "/da";
+        private const string passwordArg = "+password";
+
         private const string certificatePathArg = "-certificate";
+        private const string alternativeCertificatePathArg = "-altcertificate";
         private const string timestampPathArg = "-timestamp";
+
+        //
+        // Timestamps:
+        // http://timestamp.verisign.com/scripts/timstamp.dll [*.cer OK]
+        // http://timestamp.comodoca.com/rfc3161 [*pfx + password OK]
+        //
 
         static void Main ( string [] args )
         {
-            var folderPath = Helper.GetLineArgumentResult ( args, folderPathArg, null );
-            var filePath = Helper.GetLineArgumentResult ( args, filePathArg, null );
-            var certificatePath = Helper.GetLineArgumentResult ( args, certificatePathArg, null );
-            var timestampURL = Helper.GetLineArgumentResult ( args, timestampPathArg, "http://timestamp.verisign.com/scripts/timstamp.dll" );
+            var signMode = Extensions.CommandLineEx.GetArgumentExists ( args, signArg );
+            var unsignMode = Extensions.CommandLineEx.GetArgumentExists ( args, unsignArg );
+            var overwrite = Extensions.CommandLineEx.GetArgumentExists ( args, overwriteArg );
+            var fullPrint = Extensions.CommandLineEx.GetArgumentExists ( args, fullPrintArg );
 
-            var signMode = Helper.LineArgumentExists ( args, signArg );
-            var unsignMode = Helper.LineArgumentExists ( args, unsignArg );
-            var fullPrint = Helper.LineArgumentExists ( args, fullArg );
+            var folderPath = Extensions.CommandLineEx.GetArgumentResult ( args, folderPathArg, null );
+            var filePath = Extensions.CommandLineEx.GetArgumentResult ( args, filePathArg, null );
 
-            PrintHeader ( args );
+            var digestAlgorithm = Extensions.CommandLineEx.GetArgumentResult ( args, digestAlgorithmArg, "SHA256" );
+            var password = Extensions.CommandLineEx.GetArgumentResult ( args, passwordArg, null );
+
+            var certificatePath = Extensions.CommandLineEx.GetArgumentResult ( args, certificatePathArg, null );
+            var alternativeCertificatePath = Extensions.CommandLineEx.GetArgumentResult ( args, alternativeCertificatePathArg, null );
+            var timestampURL = Extensions.CommandLineEx.GetArgumentResult ( args, timestampPathArg, null );
 
             if ( signMode )
-                RunSigning ( folderPath, filePath, certificatePath, timestampURL, fullPrint );
+                RunSigning ( overwrite, folderPath, filePath, certificatePath, alternativeCertificatePath, timestampURL, digestAlgorithm, password, fullPrint );
             else if ( unsignMode )
                 RunUnsigning ( folderPath, filePath, fullPrint );
             else
@@ -50,10 +61,18 @@ namespace Humanlights.SignTool
             }
         }
 
-        private static void RunSigning ( string folderPath, string filePath, string certificate, string timestamp, bool fullPrint )
+        private static void RunSigning (
+            bool overwrite,
+            string folderPath,
+            string filePath,
+            string certificate,
+            string additionalCertificate,
+            string timestamp,
+            string digestAlgorithm,
+            string password,
+            bool fullPrint )
         {
             var signtoolPath = Path.GetDirectoryName ( System.Reflection.Assembly.GetExecutingAssembly ().Location ) + "/signtool.exe";
-            var certificatePath = File.Exists ( certificate ) ? certificate : Path.GetDirectoryName ( System.Reflection.Assembly.GetExecutingAssembly ().Location ) + $"/{certificate}";
 
             if ( string.IsNullOrEmpty ( signtoolPath ) )
             {
@@ -62,7 +81,7 @@ namespace Humanlights.SignTool
                 Console.Read ();
                 return;
             }
-            if ( string.IsNullOrEmpty ( certificatePath ) )
+            if ( string.IsNullOrEmpty ( certificate ) )
             {
                 Console.WriteLine ();
                 Console.WriteLine ( $"  Certificate path not set." );
@@ -77,10 +96,10 @@ namespace Humanlights.SignTool
                 Console.Read ();
                 return;
             }
-            if ( !File.Exists ( certificatePath ) )
+            if ( !File.Exists ( certificate ) )
             {
                 Console.WriteLine ();
-                Console.WriteLine ( $"  Certificate not found: {certificatePath}" );
+                Console.WriteLine ( $"  Certificate not found: {certificate}" );
                 Console.Read ();
                 return;
             }
@@ -98,18 +117,33 @@ namespace Humanlights.SignTool
                 {
                     foreach ( string file in Helper.FilesInDirectories ( folderPath ) )
                     {
-                        var signingCommandLine = $"sign /f \"{certificatePath}\" /t {timestamp} /v \"{file}\"";
+                        if ( Helper.HasExtension ( certificate, "pfx" ) )
+                        {
+                            var commandLine = $"sign /v {( overwrite ? "" : "/as" )} /f \"{certificate}\" {( string.IsNullOrEmpty ( additionalCertificate ) ? "" : $"/ac \"{additionalCertificate}\"" )} /fd {digestAlgorithm.Trim ().ToLower ()} /p \"{password}\" {( string.IsNullOrEmpty ( timestamp ) ? "" : "/t \"{timestamp}\"" )} \"{file}\"";
 
-                        var process = new Process ();
-                        process.StartInfo.FileName = signtoolPath;
-                        process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                        process.StartInfo.ErrorDialog = false;
-                        process.StartInfo.Arguments = signingCommandLine;
-                        process.Start ();
+                            var process = new Process ();
+                            process.StartInfo.FileName = signtoolPath;
+                            process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                            process.StartInfo.ErrorDialog = false;
+                            process.StartInfo.Arguments = commandLine;
+                            process.Start ();
 
-                        Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( file ).ToLower () : file )}" );
+                            Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( file ).ToLower () : file )}" );
+                        }
+                        else if ( Helper.HasExtension ( certificate, "cer" ) )
+                        {
+                            var commandLine = $"sign /v {( overwrite ? "" : "/as" )} /f \"{certificate}\" /t \"{timestamp}\" /fd {digestAlgorithm.Trim ().ToLower ()} \"{file}\"";
+
+                            var process = new Process ();
+                            process.StartInfo.FileName = signtoolPath;
+                            process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                            process.StartInfo.ErrorDialog = false;
+                            process.StartInfo.Arguments = commandLine;
+                            process.Start ();
+
+                            Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( file ).ToLower () : file )}" );
+                        }
                     }
-
                 }
             }
             if ( !string.IsNullOrEmpty ( filePath ) )
@@ -125,16 +159,32 @@ namespace Humanlights.SignTool
                 {
                     if ( Helper.EndsWith ( filePath ) )
                     {
-                        var signingCommandLine = $"sign /f \"{certificatePath}\" /t {timestamp} /v \"{filePath}\"";
+                        if ( Helper.HasExtension ( certificate, "pfx" ) )
+                        {
+                            var commandLine = $"sign /v {( overwrite ? "" : "/as" )} /f \"{certificate}\" {( string.IsNullOrEmpty ( additionalCertificate ) ? "" : $"/ac \"{additionalCertificate}\"" )} /fd {digestAlgorithm.Trim ().ToLower ()} /p \"{password}\" {( string.IsNullOrEmpty ( timestamp ) ? "" : "/t \"{timestamp}\"" )} \"{filePath}\"";
 
-                        var process = new Process ();
-                        process.StartInfo.FileName = signtoolPath;
-                        process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                        process.StartInfo.ErrorDialog = false;
-                        process.StartInfo.Arguments = signingCommandLine;
-                        process.Start ();
+                            var process = new Process ();
+                            process.StartInfo.FileName = signtoolPath;
+                            process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                            process.StartInfo.ErrorDialog = false;
+                            process.StartInfo.Arguments = commandLine;
+                            process.Start ();
 
-                        Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                            Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                        }
+                        else if ( Helper.HasExtension ( certificate, "cer" ) )
+                        {
+                            var commandLine = $"sign /v {( overwrite ? "" : "/as" )} /f \"{certificate}\" /t \"{timestamp}\" /fd {digestAlgorithm.Trim ().ToLower ()} \"{filePath}\"";
+
+                            var process = new Process ();
+                            process.StartInfo.FileName = signtoolPath;
+                            process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                            process.StartInfo.ErrorDialog = false;
+                            process.StartInfo.Arguments = commandLine;
+                            process.Start ();
+
+                            Console.WriteLine ( $"Signing: {( fullPrint == false ? Path.GetFileName ( filePath ).ToLower () : filePath )}" );
+                        }
                     }
                     else
                     {
@@ -150,7 +200,10 @@ namespace Humanlights.SignTool
 
             System.Threading.Thread.Sleep ( 1000 );
         }
-        private static void RunUnsigning ( string folderPath, string filePath, bool fullPrint )
+        private static void RunUnsigning (
+            string folderPath,
+            string filePath,
+            bool fullPrint )
         {
             if ( !string.IsNullOrEmpty ( folderPath ) )
             {
@@ -212,17 +265,6 @@ namespace Humanlights.SignTool
             Console.WriteLine ( $"  (c) Copyright 2017 Humanlights Studios LTD" );
 
             System.Threading.Thread.Sleep ( 1000 );
-        }
-
-        private static void PrintHeader (string[] args)
-        {
-            var client = new WebClient();
-            var githubLicense = client.DownloadString("https://raw.githubusercontent.com/Humanlights/Humanlights.SignTool/master/LICENSE");
-            
-            Console.WriteLine ();
-            Console.WriteLine ( githubLicense.Trim () );
-
-            System.Threading.Thread.Sleep ( 500 );
         }
     }
 }

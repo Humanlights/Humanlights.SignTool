@@ -1,30 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Humanlights.SignTool
 {
     public class Helper
     {
-        public static string GetLineArgumentResult ( string [] args, string argument, string Default )
-        {
-            for ( int i = 0; i < args.Length; i++ )
-                if ( args [ i ] == argument ) return string.IsNullOrEmpty ( args [ i + 1 ] ) ? Default : args [ i + 1 ];
-
-            return Default;
-        }
-        public static bool LineArgumentExists ( string [] args, string argument )
-        {
-            for ( int i = 0; i < args.Length; i++ )
-                if ( args [ i ] == argument ) return true;
-
-            return false;
-        }
-
-        public static List<string> FilesInDirectories (string mainFolder)
+        public static List<string> FilesInDirectories ( string mainFolder )
         {
             var all = new List<string> ();
 
@@ -42,11 +24,18 @@ namespace Humanlights.SignTool
 
             return all;
         }
-        public static bool EndsWith(string file )
+        public static bool EndsWith ( string file )
         {
             var f = file.ToLower ();
 
             if ( f.EndsWith ( ".exe" ) || f.EndsWith ( ".dll" ) || f.EndsWith ( ".ocx" ) || f.EndsWith ( ".cab" ) )
+                return true;
+
+            return false;
+        }
+        public static bool HasExtension ( string file, string extension )
+        {
+            if ( file.ToLower ().EndsWith ( $".{extension}" ) )
                 return true;
 
             return false;

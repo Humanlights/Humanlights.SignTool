@@ -1,0 +1,17 @@
+{
+  "issuedBy": "GitHub Certificate Sample",
+  "commonName": "GitHub Certificate Sample",
+  "organizationName": "GitHub Legal Fake",
+  "organizationUnit": "",
+  "title": "",
+  "emailAddress": "",
+  "country": "AT",
+  "state": "Upperaustria",
+  "city": "Altheim",
+  "validityPeriodValue": 5,
+  "validityPeriodType": 2,
+  "keyParType": 0,
+  "signatureAlgorithmType": 0,
+  "keyLengthType": 0,
+  "password": "1234"
+}
